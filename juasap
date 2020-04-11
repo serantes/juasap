@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+# From https://stackoverflow.com/questions/59895/getting-the-source-directory-of-a-bash-script-from-wit
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
+  DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" # if $SOURCE was a relative symlink, we need to resolve 
+done
+APPPATH="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
+SCRIPTNAME="$(basename "$(test -L "$0" && readlink "$0" || echo "$0")")"
+#source "$APPPATH/${SCRIPTNAME%.*}.config"
+
+pushd . >/dev/null
+cd $APPPATH
+
+if [ -d "$APPPATH/.venv" ]; then
+  source $APPPATH/.venv/bin/activate
+fi
+
+$APPPATH/juasap.py "$@" # > /dev/null 2> /dev/null
+
+if [[ "$VIRTUAL_ENV" != "" ]]; then
+  deactivate
+fi
+
+popd >/dev/null
+
+#kdialog --title $SCRIPTNAME --passivepopup 'Process finished'

@@ -1,0 +1,22 @@
+[Desktop Entry]
+Categories=Network;InstantMessaging;Qt;
+Comment[en_US]=Unofficial desktop version of WhatsApp
+Comment=Unofficial desktop version of WhatsApp
+Exec=juasap
+GenericName[en_US]=
+GenericName=
+Icon=/home/ignacio/devel/juasap/desktop/Juasap.png
+MimeType=
+Name[en_US]=Juasap
+Name=Juasap
+NoDisplay=false
+Path=
+StartupNotify=true
+Terminal=false
+TerminalOptions=
+Type=Application
+Version=1.0
+X-DBUS-ServiceName=
+X-DBUS-StartupType=
+X-KDE-SubstituteUID=false
+X-KDE-Username=

@@ -130,4 +130,7 @@ dmypy.json
 
 
 # Custom
+*~
 .directory
+*.pyproject
+*.pyproject.user
