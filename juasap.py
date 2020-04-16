@@ -2,9 +2,9 @@
 
 import os
 import sys
-from PySide2.QtCore import (QUrl)
+from PySide2.QtCore import (QLocale, QTranslator, QUrl)
 from PySide2.QtGui import (QIcon)
-from PySide2.QtWidgets import (QApplication, QMainWindow, QMenu,
+from PySide2.QtWidgets import (QApplication, QFileDialog, QMainWindow, QMenu,
                                QSystemTrayIcon)
 from PySide2.QtWebEngineWidgets import (QWebEnginePage, QWebEngineView)
 
@@ -15,11 +15,10 @@ APP_VERSION = '1.0'
 APP_AUTHOR = 'Ignacio Serantes'
 
 APP_MAIN_URL = 'https://web.whatsapp.com'
-APP_USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.92 Safari/537.36'
-
-MSG_EXIT = 'Exit'
-# MSG_HIDE_MAIN_WINDOW = 'Hide ' + APP_NAME
-MSG_SHOW_MAIN_WINDOW = 'Show ' + APP_NAME
+APP_USER_AGENT = (
+                    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
+                    '(KHTML, like Gecko) Chrome/81.0.4044.92 Safari/537.36'
+                )
 
 
 class MainWindow(QMainWindow):
@@ -29,16 +28,22 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(APP_NAME)
 
         self.webEngineView = QWebEngineView()
-        self.webEngineView.page().setFeaturePermission(
+        self.setCentralWidget(self.webEngineView)
+
+        page = self.webEngineView.page()
+        page.setFeaturePermission(
             QUrl(APP_MAIN_URL),
             QWebEnginePage.Notifications,
-            QWebEnginePage.PermissionGrantedByUser)
-        self.webEngineView.page().profile().setHttpUserAgent(APP_USER_AGENT)
-        self.webEngineView.page().featurePermissionRequested.connect(
-            self.featurePermissionRequested)
-        self.webEngineView.load(QUrl(APP_MAIN_URL))
+            QWebEnginePage.PermissionGrantedByUser
+            )
+        page.featurePermissionRequested.connect(
+            self.featurePermissionRequested
+            )
+        profile = page.profile()
+        profile.setHttpUserAgent(APP_USER_AGENT)
+        profile.downloadRequested.connect(app.download)
 
-        self.setCentralWidget(self.webEngineView)
+        self.webEngineView.load(QUrl(APP_MAIN_URL))
 
     def closeEvent(self, event):
         self.hide()
@@ -56,16 +61,26 @@ class App:
         # Create a Qt application
         self.app = QApplication(sys.argv)
 
+        # Internationalization.
+        translator = QTranslator()
+        translationsDir = 'i18n'
+        if hasattr(sys, '_MEIPASS'):
+            translationsDir = os.path.join(sys._MEIPASS, translationsDir)
+        if translator.load(QLocale(), APP_NAME, '.', translationsDir, '.qm'):
+            self.app.installTranslator(translator)
+
+        # System tray icon menu.
         icon = QIcon(self.getSysTrayIconFile())
         menu = QMenu()
-        # hideMainWindowAction = menu.addAction(MSG_HIDE_MAIN_WINDOW)
-        # hideMainWindowAction.triggered.connect(self.hideMainWindow)
-        showMainWindowAction = menu.addAction(MSG_SHOW_MAIN_WINDOW)
+        showMainWindowAction = menu.addAction(
+            self.app.tr('Show %s window') % (APP_NAME)
+            )
         showMainWindowAction.triggered.connect(self.showMainWindow)
         menu.addSeparator()
-        exitAction = menu.addAction(MSG_EXIT)
+        exitAction = menu.addAction(self.app.tr('Exit'))
         exitAction.triggered.connect(sys.exit)
 
+        # System tray icon creation.
         self.tray = QSystemTrayIcon()
         self.tray.setIcon(icon)
         self.tray.setContextMenu(menu)
@@ -73,11 +88,26 @@ class App:
         self.tray.setToolTip(APP_NAME)
         self.tray.activated.connect(self.iconActivated)
 
+    def download(self, download):
+        filename = QFileDialog.getSaveFileName(
+                                                None,
+                                                self.app.tr('Save as'),
+                                                download.path(),
+                                                ""
+                                            )
+
+        if (filename[0] == ''):
+            download.cancel()
+
+        else:
+            download.setPath(filename[0])
+            download.accept()
+
     def getSysTrayIconFile(self):
         iconFile = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                 "desktop/Juasap.png")
         if not os.path.exists(iconFile) and hasattr(sys, '_MEIPASS'):
-            iconFile = os.path.join(sys._MEIPASS, 'Juasap.png')
+            iconFile = os.path.join(sys._MEIPASS, 'desktop/Juasap.png')
 
         return iconFile
 
