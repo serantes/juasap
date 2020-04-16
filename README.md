@@ -1,8 +1,9 @@
 # Juasap
 
-**Juasap** is a Python3 script to browse Whatsapp web version simulating a desktop application thanks to Qt5 and it's QTWebEngine components.
+**Juasap** is a Python3 script to browse WhatsApp web version simulating a desktop application thanks to Qt5 and it's Qt WebEngine components.
 
-**Juasap** has a window to display the web version of Whatsapp, "https://web.whatsapp.com," and an icon in the system tray to close the application. The window close button only hides the window and don't close the application.
+**Juasap** has a window to display the web version of WhatsApp, "https://web.whatsapp.com," and an icon in the system tray to close the application. The window close button only hides the window and don't close the application.
+
 
 ### Requirements
 
