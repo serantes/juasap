@@ -2,19 +2,19 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="gl">
 <context>
-    <name>App</name>
+    <name>self.app</name>
     <message>
-        <location filename="juasap.py" line="74"/>
+        <location filename="juasap.py" line="78"/>
         <source>Show %s window</source>
         <translation>Amosar a ventá de %s</translation>
     </message>
     <message>
-        <location filename="juasap.py" line="78"/>
+        <location filename="juasap.py" line="82"/>
         <source>Exit</source>
-        <translation>Sair</translation>
+        <translation>Saír</translation>
     </message>
     <message>
-        <location filename="juasap.py" line="92"/>
+        <location filename="juasap.py" line="96"/>
         <source>Save as</source>
         <translation>Gravar como</translation>
     </message>

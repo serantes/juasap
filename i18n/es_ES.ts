@@ -2,21 +2,21 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="es">
 <context>
-    <name>App</name>
+    <name>self.app</name>
     <message>
-        <location filename="juasap.py" line="74"/>
+        <location filename="juasap.py" line="78"/>
         <source>Show %s window</source>
         <translation>Mostrar la ventana de %s</translation>
     </message>
     <message>
-        <location filename="juasap.py" line="78"/>
+        <location filename="juasap.py" line="82"/>
         <source>Exit</source>
         <translation>Salir</translation>
     </message>
     <message>
-        <location filename="juasap.py" line="92"/>
+        <location filename="juasap.py" line="96"/>
         <source>Save as</source>
-        <translation>Grabar como</translation>
+        <translation>Guardar como</translation>
     </message>
 </context>
 </TS>
