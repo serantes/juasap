@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import subprocess
 import sys
 from PySide2.QtCore import (QLocale, QTranslator, QUrl)
 from PySide2.QtGui import (QIcon)
@@ -20,6 +21,21 @@ APP_USER_AGENT = (
                     '(KHTML, like Gecko) Chrome/81.0.4044.92 Safari/537.36'
                 )
 
+URL_OPEN_BIN = 'xdg-open'
+
+
+class WebView(QWebEngineView):
+    def __init__(self):
+        super(WebView, self).__init__()
+
+    def __del__(self):
+        pass
+
+    def createWindow(self, window_type):
+        app.webEngineViewAux = QWebEngineView()
+        app.webEngineViewAux.urlChanged.connect(app.launchExternalUrl)
+        return app.webEngineViewAux
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -27,23 +43,24 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle(APP_NAME)
 
-        self.webEngineView = QWebEngineView()
+        self.webEngineView = WebView()
         self.setCentralWidget(self.webEngineView)
 
         page = self.webEngineView.page()
-        page.setFeaturePermission(
-            QUrl(APP_MAIN_URL),
-            QWebEnginePage.Notifications,
-            QWebEnginePage.PermissionGrantedByUser
-            )
-        page.featurePermissionRequested.connect(
-            self.featurePermissionRequested
-            )
+#        page.featurePermissionRequested.connect(
+#            self.featurePermissionRequested
+#            )
         profile = page.profile()
         profile.setHttpUserAgent(APP_USER_AGENT)
         profile.downloadRequested.connect(app.download)
 
         self.webEngineView.load(QUrl(APP_MAIN_URL))
+
+        page.setFeaturePermission(
+            page.requestedUrl(),
+            QWebEnginePage.Notifications,
+            QWebEnginePage.PermissionGrantedByUser
+            )
 
     def closeEvent(self, event):
         self.hide()
@@ -66,7 +83,9 @@ class App:
         translationsDir = 'i18n'
         if hasattr(sys, '_MEIPASS'):
             translationsDir = os.path.join(sys._MEIPASS, translationsDir)
-        if translator.load(QLocale(), APP_NAME, '.', translationsDir, '.qm'):
+        if translator.load(
+                            QLocale(), QLocale().name(), '.', translationsDir,
+                            '.qm'):
             self.app.installTranslator(translator)
 
         # System tray icon menu.
@@ -118,11 +137,15 @@ class App:
         if (reason == QSystemTrayIcon.Trigger):
             self.toogleVisible()
 
+    def launchExternalUrl(self, url):
+        subprocess.call([URL_OPEN_BIN, url.toString()])
+        self.webEngineViewAux = None
+
     def run(self):
         self.mainWindow = MainWindow()
         availableGeometry = self.app.desktop().availableGeometry(
             self.mainWindow)
-        self.mainWindow.resize(availableGeometry.width() * 0.33,
+        self.mainWindow.resize(availableGeometry.width() * 0.40,
                                availableGeometry.height() * 0.90)
         self.mainWindow.show()
 
