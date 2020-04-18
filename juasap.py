@@ -1,9 +1,20 @@
 #!/usr/bin/env python3
 
+__author__ = 'Ignacio Serantes'
+__copyright__ = 'Copyright 2020, Ignacio Serantes'
+__credits__ = ['Ignacio Serantes', 'Python Software Foundation',
+               'The Qt Company', 'WhatsApp Inc.']
+__license__ = 'GPL'
+__version__ = '1.0'
+__maintainer__ = 'Ignacio Serantes'
+__email__ = 'development@aynoa.net'
+__status__ = 'Development'
+
+
 import os
 import subprocess
 import sys
-from PySide2.QtCore import (QLocale, QTranslator, QUrl)
+from PySide2.QtCore import (QUrl)
 from PySide2.QtGui import (QIcon)
 from PySide2.QtWidgets import (QApplication, QFileDialog, QMainWindow, QMenu,
                                QSystemTrayIcon)
@@ -12,16 +23,36 @@ from PySide2.QtWebEngineWidgets import (QWebEnginePage, QWebEngineView)
 
 # Constants.
 APP_NAME = 'Juasap'
-APP_VERSION = '1.0'
-APP_AUTHOR = 'Ignacio Serantes'
-
 APP_MAIN_URL = 'https://web.whatsapp.com'
+APP_ICON = 'juasap.png'
 APP_USER_AGENT = (
                     'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
                     '(KHTML, like Gecko) Chrome/81.0.4044.92 Safari/537.36'
                 )
 
 URL_OPEN_BIN = 'xdg-open'
+
+LANGUAGE = os.getenv('LANG')[0:2].lower()
+
+
+def _(s):
+    spanishStrings = {
+        'Exit': 'Salir',
+        'Show %s window': 'Mostrar la ventana de %s',
+        'Save as': 'Grabar como'
+    }
+    galicianStrings = {
+        'Exit': 'Saír',
+        'Show %s window': 'Amosar a ventá de %s',
+        'Save as': 'Gravar como'
+    }
+
+    if (LANGUAGE == 'es'):
+        return spanishStrings[s]
+    elif (LANGUAGE == 'gl'):
+        return galicianStrings[s]
+    else:
+        return s
 
 
 class WebView(QWebEngineView):
@@ -47,9 +78,6 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.webEngineView)
 
         page = self.webEngineView.page()
-#        page.featurePermissionRequested.connect(
-#            self.featurePermissionRequested
-#            )
         profile = page.profile()
         profile.setHttpUserAgent(APP_USER_AGENT)
         profile.downloadRequested.connect(app.download)
@@ -60,7 +88,7 @@ class MainWindow(QMainWindow):
             page.requestedUrl(),
             QWebEnginePage.Notifications,
             QWebEnginePage.PermissionGrantedByUser
-            )
+        )
 
     def closeEvent(self, event):
         self.hide()
@@ -70,38 +98,28 @@ class MainWindow(QMainWindow):
         self.webEngineView.page().setFeaturePermission(
             securityOrigin,
             feature,
-            QWebEnginePage.PermissionGrantedByUser)
+            QWebEnginePage.PermissionDeniedByUser
+        )
 
 
 class App:
     def __init__(self):
-        # Create a Qt application
+        # Qt application creation.
         self.app = QApplication(sys.argv)
 
-        # Internationalization.
-        translator = QTranslator()
-        translationsDir = 'i18n'
-        if hasattr(sys, '_MEIPASS'):
-            translationsDir = os.path.join(sys._MEIPASS, translationsDir)
-        if translator.load(
-                            QLocale(), QLocale().name(), '.', translationsDir,
-                            '.qm'):
-            self.app.installTranslator(translator)
-
-        # System tray icon menu.
-        icon = QIcon(self.getSysTrayIconFile())
+        # System tray icon menu creation.
         menu = QMenu()
         showMainWindowAction = menu.addAction(
-            self.app.tr('Show %s window') % (APP_NAME)
-            )
+            _('Show %s window') % (APP_NAME)
+        )
         showMainWindowAction.triggered.connect(self.showMainWindow)
         menu.addSeparator()
-        exitAction = menu.addAction(self.app.tr('Exit'))
+        exitAction = menu.addAction(_('Exit'))
         exitAction.triggered.connect(sys.exit)
 
         # System tray icon creation.
         self.tray = QSystemTrayIcon()
-        self.tray.setIcon(icon)
+        self.tray.setIcon(QIcon(self.getResourceFile(APP_ICON)))
         self.tray.setContextMenu(menu)
         self.tray.show()
         self.tray.setToolTip(APP_NAME)
@@ -109,11 +127,11 @@ class App:
 
     def download(self, download):
         filename = QFileDialog.getSaveFileName(
-                                                None,
-                                                self.app.tr('Save as'),
-                                                download.path(),
-                                                ""
-                                            )
+            None,
+            _('Save as'),
+            download.path(),
+            ""
+        )
 
         if (filename[0] == ''):
             download.cancel()
@@ -122,20 +140,24 @@ class App:
             download.setPath(filename[0])
             download.accept()
 
-    def getSysTrayIconFile(self):
-        iconFile = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                "desktop/Juasap.png")
-        if not os.path.exists(iconFile) and hasattr(sys, '_MEIPASS'):
-            iconFile = os.path.join(sys._MEIPASS, 'desktop/Juasap.png')
+    def getResourceFile(self, fileName):
+        if hasattr(sys, '_MEIPASS'):
+            filePath = sys._MEIPASS
+        else:
+            filePath = os.path.dirname(os.path.realpath(__file__))
 
-        return iconFile
+        fileNameAux = fileName.lower()
+        if (fileNameAux == APP_ICON):
+            fileName = os.path.join(filePath, 'desktop/Juasap.png')
+
+        return fileName
 
     def hideMainWindow(self):
         self.mainWindow.hide()
 
     def iconActivated(self, reason):
         if (reason == QSystemTrayIcon.Trigger):
-            self.toogleVisible()
+            self.toggleVisible()
 
     def launchExternalUrl(self, url):
         subprocess.call([URL_OPEN_BIN, url.toString()])
@@ -149,14 +171,13 @@ class App:
                                availableGeometry.height() * 0.90)
         self.mainWindow.show()
 
-        # Enter Qt application main loop
-        self.app.exec_()
-        sys.exit()
+        # Enter Qt application main loop.
+        sys.exit(self.app.exec_())
 
     def showMainWindow(self):
         self.mainWindow.show()
 
-    def toogleVisible(self):
+    def toggleVisible(self):
         if self.mainWindow.isVisible():
             self.hideMainWindow()
         else:
