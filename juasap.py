@@ -11,6 +11,7 @@ __email__ = 'development@aynoa.net'
 __status__ = 'Development'
 
 
+import gettext
 import os
 import subprocess
 import sys
@@ -30,29 +31,34 @@ APP_USER_AGENT = (
                     '(KHTML, like Gecko) Chrome/81.0.4044.92 Safari/537.36'
                 )
 
+ROOT_DIR = sys._MEIPASS \
+    if hasattr(sys, '_MEIPASS') \
+    else os.path.dirname(os.path.realpath(__file__))
+
 URL_OPEN_BIN = 'xdg-open'
 
-LANGUAGE = os.getenv('LANG')[0:2].lower()
+
+#LANGUAGE = os.getenv('LANG')[0:2].lower()
 
 
-def _(s):
-    spanishStrings = {
-        'Exit': 'Salir',
-        'Show %s window': 'Mostrar la ventana de %s',
-        'Save as': 'Grabar como'
-    }
-    galicianStrings = {
-        'Exit': 'Saír',
-        'Show %s window': 'Amosar a ventá de %s',
-        'Save as': 'Gravar como'
-    }
+#def _(s):
+#    spanishStrings = {
+#        'Exit': 'Salir',
+#        'Show %s window': 'Mostrar la ventana de %s',
+#        'Save as': 'Grabar como'
+#    }
+#    galicianStrings = {
+#        'Exit': 'Saír',
+#        'Show %s window': 'Amosar a ventá de %s',
+#        'Save as': 'Gravar como'
+#    }
 
-    if (LANGUAGE == 'es'):
-        return spanishStrings[s]
-    elif (LANGUAGE == 'gl'):
-        return galicianStrings[s]
-    else:
-        return s
+#    if (LANGUAGE == 'es'):
+#        return spanishStrings[s]
+#    elif (LANGUAGE == 'gl'):
+#        return galicianStrings[s]
+#    else:
+#        return s
 
 
 class WebView(QWebEngineView):
@@ -104,6 +110,18 @@ class MainWindow(QMainWindow):
 
 class App:
     def __init__(self):
+        # Internationalization.
+        lang = os.getenv('LANG')[0:2].lower()
+        if (lang not in ('es', 'gl')):
+            lang = 'en'
+        self.translations = gettext.translation(
+            'messages',
+            localedir=self.rootDir('locales'),
+            languages=[lang]
+        )
+        self.translations.install()
+        _ = self.translations.gettext
+
         # Qt application creation.
         self.app = QApplication(sys.argv)
 
@@ -128,7 +146,7 @@ class App:
     def download(self, download):
         filename = QFileDialog.getSaveFileName(
             None,
-            _('Save as'),
+            self.translations.gettext('Save as'),
             download.path(),
             ""
         )
@@ -141,14 +159,9 @@ class App:
             download.accept()
 
     def getResourceFile(self, fileName):
-        if hasattr(sys, '_MEIPASS'):
-            filePath = sys._MEIPASS
-        else:
-            filePath = os.path.dirname(os.path.realpath(__file__))
-
         fileNameAux = fileName.lower()
         if (fileNameAux == APP_ICON):
-            fileName = os.path.join(filePath, 'desktop/Juasap.png')
+            fileName = os.path.join(self.rootDir('desktop'), 'Juasap.png')
 
         return fileName
 
@@ -162,6 +175,9 @@ class App:
     def launchExternalUrl(self, url):
         subprocess.call([URL_OPEN_BIN, url.toString()])
         self.webEngineViewAux = None
+
+    def rootDir(self, dir):
+        return os.path.join(ROOT_DIR, dir)
 
     def run(self):
         self.mainWindow = MainWindow()
