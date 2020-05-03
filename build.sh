@@ -4,9 +4,9 @@
 
 pyinstaller \
     --add-binary './desktop/Juasap.png:desktop' \
-    --add-binary './locales/en/LC_MESSAGES/messages.mo:locales/en/LC_MESSAGES' \
-    --add-binary './locales/es/LC_MESSAGES/messages.mo:locales/es/LC_MESSAGES' \
-    --add-binary './locales/gl/LC_MESSAGES/messages.mo:locales/gl/LC_MESSAGES' \
+    --add-binary './locale/en/LC_MESSAGES/messages.mo:locale/en/LC_MESSAGES' \
+    --add-binary './locale/es/LC_MESSAGES/messages.mo:locale/es/LC_MESSAGES' \
+    --add-binary './locale/gl/LC_MESSAGES/messages.mo:locale/gl/LC_MESSAGES' \
     -F juasap.py
 
 #deactivate

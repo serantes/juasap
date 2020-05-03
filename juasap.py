@@ -11,16 +11,17 @@ __email__ = 'development@aynoa.net'
 __status__ = 'Development'
 
 
-import gettext
 import os
-import subprocess
+import signal
 import sys
-from PySide2.QtCore import (QUrl)
+from PySide2.QtCore import (QTimer, QUrl)
 from PySide2.QtGui import (QIcon)
 from PySide2.QtWidgets import (QApplication, QFileDialog, QMainWindow, QMenu,
                                QSystemTrayIcon)
 from PySide2.QtWebEngineWidgets import (QWebEnginePage, QWebEngineView)
 
+from language import (_)
+from tools import _EOU, _PR2A
 
 # Constants.
 APP_NAME = 'Juasap'
@@ -28,37 +29,8 @@ APP_MAIN_URL = 'https://web.whatsapp.com'
 APP_ICON = 'juasap.png'
 APP_USER_AGENT = (
                     'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
-                    '(KHTML, like Gecko) Chrome/81.0.4044.92 Safari/537.36'
+                    '(KHTML, like Gecko) Chrome/81.0.4044.122 Safari/537.36'
                 )
-
-ROOT_DIR = sys._MEIPASS \
-    if hasattr(sys, '_MEIPASS') \
-    else os.path.dirname(os.path.realpath(__file__))
-
-URL_OPEN_BIN = 'xdg-open'
-
-
-#LANGUAGE = os.getenv('LANG')[0:2].lower()
-
-
-#def _(s):
-#    spanishStrings = {
-#        'Exit': 'Salir',
-#        'Show %s window': 'Mostrar la ventana de %s',
-#        'Save as': 'Grabar como'
-#    }
-#    galicianStrings = {
-#        'Exit': 'Saír',
-#        'Show %s window': 'Amosar a ventá de %s',
-#        'Save as': 'Gravar como'
-#    }
-
-#    if (LANGUAGE == 'es'):
-#        return spanishStrings[s]
-#    elif (LANGUAGE == 'gl'):
-#        return galicianStrings[s]
-#    else:
-#        return s
 
 
 class WebView(QWebEngineView):
@@ -69,9 +41,8 @@ class WebView(QWebEngineView):
         pass
 
     def createWindow(self, window_type):
-        app.webEngineViewAux = QWebEngineView()
-        app.webEngineViewAux.urlChanged.connect(app.launchExternalUrl)
-        return app.webEngineViewAux
+        app.wevExternalUrl.urlChanged.connect(app._launchExternalUrl)
+        return app.wevExternalUrl
 
 
 class MainWindow(QMainWindow):
@@ -85,15 +56,24 @@ class MainWindow(QMainWindow):
 
         page = self.webEngineView.page()
         profile = page.profile()
+
+        # HACK: must delete this file to avoid problems with user agent.
+        fileName = os.path.join(
+            self.webEngineView.page().profile().persistentStoragePath(),
+            'Service Worker/Database/000003.log'
+        )
+        if os.path.exists(fileName):
+            os.remove(fileName)
+
         profile.setHttpUserAgent(APP_USER_AGENT)
-        profile.downloadRequested.connect(app.download)
+        profile.downloadRequested.connect(app._download)
 
         self.webEngineView.load(QUrl(APP_MAIN_URL))
 
         page.setFeaturePermission(
             page.requestedUrl(),
             QWebEnginePage.Notifications,
-            QWebEnginePage.PermissionGrantedByUser
+            QWebEnginePage.PermissionDeniedByUser
         )
 
     def closeEvent(self, event):
@@ -109,21 +89,11 @@ class MainWindow(QMainWindow):
 
 
 class App:
-    def __init__(self):
-        # Internationalization.
-        lang = os.getenv('LANG')[0:2].lower()
-        if (lang not in ('es', 'gl')):
-            lang = 'en'
-        self.translations = gettext.translation(
-            'messages',
-            localedir=self.rootDir('locales'),
-            languages=[lang]
-        )
-        self.translations.install()
-        _ = self.translations.gettext
+    killSignal = signal.SIGUSR1
 
+    def __init__(self):
         # Qt application creation.
-        self.app = QApplication(sys.argv)
+        self.qApp = QApplication(sys.argv)
 
         # System tray icon menu creation.
         menu = QMenu()
@@ -133,7 +103,7 @@ class App:
         showMainWindowAction.triggered.connect(self.showMainWindow)
         menu.addSeparator()
         exitAction = menu.addAction(_('Exit'))
-        exitAction.triggered.connect(sys.exit)
+        exitAction.triggered.connect(self._quit)
 
         # System tray icon creation.
         self.tray = QSystemTrayIcon()
@@ -141,12 +111,15 @@ class App:
         self.tray.setContextMenu(menu)
         self.tray.show()
         self.tray.setToolTip(APP_NAME)
-        self.tray.activated.connect(self.iconActivated)
+        self.tray.activated.connect(self._iconActivated)
 
-    def download(self, download):
+        # QWebEngineView to handle external urls opening.
+        self.wevExternalUrl = QWebEngineView()
+
+    def _download(self, download):
         filename = QFileDialog.getSaveFileName(
             None,
-            self.translations.gettext('Save as'),
+            _('Save as'),
             download.path(),
             ""
         )
@@ -158,37 +131,48 @@ class App:
             download.setPath(filename[0])
             download.accept()
 
+    def _iconActivated(self, reason):
+        if (reason == QSystemTrayIcon.Trigger):
+            self.toggleVisible()
+
+    def _kill(self):
+        if (self.killSignal == signal.SIGUSR1):
+            self.killSignal = signal.SIGTERM
+
+        elif (self.killSignal == signal.SIGTERM):
+            self.killSignal = signal.SIGKILL
+
+        print('Killing...')
+        os.killpg(0, self.killSignal)
+
+    def _launchExternalUrl(self, url):
+        self.wevExternalUrl.urlChanged.disconnect(self._launchExternalUrl)
+        _EOU(url.toString())
+
+    def _quit(self, checked):
+        # Sometimes QtWebEngineProcess hangs and next code is a work around.
+        self.timer = QTimer()
+        self.timer.timeout.connect(self._kill)
+        self.timer.start(5000*10)  # Two seconds for mercy.
+        sys.exit()
+
     def getResourceFile(self, fileName):
         fileNameAux = fileName.lower()
         if (fileNameAux == APP_ICON):
-            fileName = os.path.join(self.rootDir('desktop'), 'Juasap.png')
+            fileName = os.path.join(_PR2A('desktop'), 'Juasap.png')
 
         return fileName
 
     def hideMainWindow(self):
         self.mainWindow.hide()
 
-    def iconActivated(self, reason):
-        if (reason == QSystemTrayIcon.Trigger):
-            self.toggleVisible()
-
-    def launchExternalUrl(self, url):
-        subprocess.call([URL_OPEN_BIN, url.toString()])
-        self.webEngineViewAux = None
-
-    def rootDir(self, dir):
-        return os.path.join(ROOT_DIR, dir)
-
     def run(self):
         self.mainWindow = MainWindow()
-        availableGeometry = self.app.desktop().availableGeometry(
+        availableGeometry = self.qApp.desktop().availableGeometry(
             self.mainWindow)
         self.mainWindow.resize(availableGeometry.width() * 0.40,
                                availableGeometry.height() * 0.90)
         self.mainWindow.show()
-
-        # Enter Qt application main loop.
-        sys.exit(self.app.exec_())
 
     def showMainWindow(self):
         self.mainWindow.show()
@@ -201,5 +185,12 @@ class App:
 
 
 if __name__ == '__main__':
+    # Process group creation for safety.
+    os.setpgrp()
+
+    # App object creation and run.
     app = App()
     app.run()
+
+    # Enter Qt application main loop.
+    sys.exit(app.qApp.exec_())
